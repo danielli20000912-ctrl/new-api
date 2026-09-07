@@ -73,6 +73,21 @@ describe('pricing controls', () => {
     expect(props.onTokenUnitChange).toHaveBeenCalledTimes(1)
   })
 
+  it('hides the price display switch when recharge and standard prices are identical', () => {
+    const props = toolbarProps()
+    const { rerender } = render(
+      <PricingToolbar {...props} showRechargeToggle={false} />
+    )
+    expect(
+      screen.queryByRole('button', { name: 'Recharge' })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Standard' })
+    ).not.toBeInTheDocument()
+    rerender(<PricingToolbar {...props} showRechargeToggle />)
+    expect(screen.getByRole('button', { name: 'Recharge' })).toBeInTheDocument()
+  })
+
   it('changes the recharge display mode with an accessible selected state', async () => {
     const props = toolbarProps()
     const user = userEvent.setup()
