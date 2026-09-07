@@ -51,16 +51,17 @@ export function getConfiguredGroupRatio(
 }
 
 /**
- * Resolve the group ratio used by model square summary prices.
+ * Resolve the group whose price the model square summary shows.
  *
- * When no specific group is selected, the model square shows the best price
- * available to the viewer. When a group filter is active, it shows that
- * group's price instead.
+ * When a group filter is active and the model is enabled for it, that group
+ * wins. Otherwise the cheapest configured group is shown (the best price
+ * available to the viewer). Falls back to the first enabled group when no
+ * ratio is configured, and to `undefined` when the model has no groups.
  */
-export function getDisplayGroupRatio(
+export function getDisplayGroup(
   model: PricingModel,
   selectedGroup?: string
-): number {
+): string | undefined {
   const modelEnableGroups = Array.isArray(model.enable_groups)
     ? model.enable_groups
     : []
@@ -71,13 +72,10 @@ export function getDisplayGroupRatio(
     selectedGroup !== FILTER_ALL &&
     modelEnableGroups.includes(selectedGroup)
   ) {
-    return getConfiguredGroupRatio(groupRatio, selectedGroup)
+    return selectedGroup
   }
 
-  if (modelEnableGroups.length === 0) {
-    return 1
-  }
-
+  let cheapestGroup: string | undefined
   let minRatio = Number.POSITIVE_INFINITY
 
   for (const group of modelEnableGroups) {
@@ -88,10 +86,26 @@ export function getDisplayGroupRatio(
       ratio < minRatio
     ) {
       minRatio = ratio
+      cheapestGroup = group
     }
   }
 
-  return minRatio === Number.POSITIVE_INFINITY ? 1 : minRatio
+  return cheapestGroup ?? modelEnableGroups[0]
+}
+
+/**
+ * Resolve the group ratio used by model square summary prices.
+ *
+ * Always the ratio of `getDisplayGroup()`, so the price and the group label
+ * shown next to it describe the same group.
+ */
+export function getDisplayGroupRatio(
+  model: PricingModel,
+  selectedGroup?: string
+): number {
+  const group = getDisplayGroup(model, selectedGroup)
+  if (!group) return 1
+  return getConfiguredGroupRatio(model.group_ratio || {}, group)
 }
 
 /**
