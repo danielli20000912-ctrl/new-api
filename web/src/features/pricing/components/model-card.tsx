@@ -35,7 +35,7 @@ import {
   isUnconfiguredTaskUsageModel,
 } from '../lib/dynamic-price'
 import { parseTags } from '../lib/filters'
-import { isTokenBasedModel } from '../lib/model-helpers'
+import { getDisplayGroup, isTokenBasedModel } from '../lib/model-helpers'
 import { formatPrice, formatRequestPrice } from '../lib/price'
 import { getTaskNumberFields } from '../lib/task-expr'
 import type { PricingModel, PriceType, TokenUnit } from '../types'
@@ -62,7 +62,13 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
   const isTokenBased = isTokenBasedModel(props.model)
   const tokenUnitLabel = tokenUnit === 'K' ? '1K' : '1M'
   const tags = parseTags(props.model.tags)
-  const groups = props.model.enable_groups || []
+  // Lead with the group whose price this card shows so the label and the
+  // number agree; the remaining groups fold into the "+N" overflow.
+  const displayGroup = getDisplayGroup(props.model, props.selectedGroup)
+  const groups = [
+    ...(displayGroup ? [displayGroup] : []),
+    ...(props.model.enable_groups || []).filter((g) => g !== displayGroup),
+  ]
   const endpoints = props.model.supported_endpoint_types || []
   const modelIconKey = props.model.icon || props.model.vendor_icon
   const modelIcon = modelIconKey ? getLobeIcon(modelIconKey, 28) : null

@@ -112,6 +112,47 @@ describe('model cards', () => {
     expect(screen.getByRole('button', { name: 'Details' })).toBeEnabled()
   })
 
+  it('labels the card with the group whose price it shows', () => {
+    render(
+      <ModelCard
+        model={pricingModel({
+          enable_groups: ['premium', 'default'],
+          group_ratio: { premium: 3, default: 1 },
+        })}
+        onClick={vi.fn()}
+      />
+    )
+    const groupField = screen.getByText('Groups').parentElement
+    if (!groupField) {
+      throw new Error('Expected labeled group field')
+    }
+    // No group filter: the summary price is the cheapest group's, so the
+    // label must name that group rather than the first enabled one.
+    expect(within(groupField).getByText('default')).toBeVisible()
+    expect(within(groupField).getByText('+1')).toHaveAttribute(
+      'title',
+      'premium'
+    )
+  })
+
+  it('labels the card with the selected group when a filter is active', () => {
+    render(
+      <ModelCard
+        model={pricingModel({
+          enable_groups: ['default', 'premium'],
+          group_ratio: { premium: 3, default: 1 },
+        })}
+        selectedGroup='premium'
+        onClick={vi.fn()}
+      />
+    )
+    const groupField = screen.getByText('Groups').parentElement
+    if (!groupField) {
+      throw new Error('Expected labeled group field')
+    }
+    expect(within(groupField).getByText('premium')).toBeVisible()
+  })
+
   it('keeps group, endpoint and tag overflow counts with their own metadata', () => {
     const groups = ['default-with-a-long-group-name', 'premium', 'internal']
     const endpoints = ['openai-response', 'openai', 'claude', 'gemini', 'jina']
@@ -127,6 +168,9 @@ describe('model cards', () => {
       <ModelCard
         model={pricingModel({
           enable_groups: groups,
+          // The card leads with the cheapest group; keep it the first one so
+          // this test stays about overflow counts.
+          group_ratio: { [groups[0]]: 1, premium: 3, internal: 2 },
           supported_endpoint_types: endpoints,
           tags: tags.join(','),
         })}
