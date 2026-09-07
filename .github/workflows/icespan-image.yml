@@ -1,0 +1,46 @@
+# ICESPAN 自用镜像：上游正式版 tag + 少量前端补丁。
+# 只在 icespan/** 分支上存在，不随补丁 PR 提交给上游。
+name: icespan-image
+
+on:
+  push:
+    branches: ['icespan/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Image tag from branch name
+        id: meta
+        run: |
+          ref="${GITHUB_REF_NAME#icespan/}"
+          echo "tag=$(echo "$ref" | tr '/' '-')" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/new-api:icespan-${{ steps.meta.outputs.tag }}
+            ghcr.io/${{ github.repository_owner }}/new-api:icespan-${{ steps.meta.outputs.tag }}-${{ steps.meta.outputs.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
