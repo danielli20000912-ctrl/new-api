@@ -161,7 +161,12 @@ export function parseCurrencyDisplayType(
 
 function getConfig(): CurrencyConfig {
   const { config } = useSystemConfigStore.getState()
-  const currency = config?.currency ?? DEFAULT_CURRENCY_CONFIG
+  return resolveConfig(config?.currency)
+}
+
+function resolveConfig(
+  currency?: Partial<CurrencyConfig> | null
+): CurrencyConfig {
   return {
     ...DEFAULT_CURRENCY_CONFIG,
     ...currency,
@@ -366,6 +371,27 @@ export function getCurrencyDisplay() {
   const config = getConfig()
   const meta = getDisplayMeta(config)
   return { config, meta }
+}
+
+/**
+ * Exchange rate that billing/pricing formatters multiply a USD amount by.
+ *
+ * `formatBillingCurrencyFromUSD()` scales by this rate before printing, so any
+ * caller that pre-divides a local-currency amount (e.g. a recharge price
+ * computed as `usd × priceRatio`) must divide by the same rate to round-trip:
+ * 1 for USD/TOKENS, `usdExchangeRate` for CNY, `customCurrencyExchangeRate`
+ * for CUSTOM. Dividing by `usdExchangeRate` unconditionally is wrong for
+ * CUSTOM display, where the formatter does not multiply by it.
+ *
+ * Pass the currency config from `useSystemConfig()` for reactive callers;
+ * without an argument the current store state is used.
+ */
+export function getBillingDisplayExchangeRate(
+  currency?: Partial<CurrencyConfig> | null
+): number {
+  const config = currency ? resolveConfig(currency) : getConfig()
+  const meta = getBillingDisplayMeta(config)
+  return meta.kind === 'tokens' ? 1 : meta.exchangeRate
 }
 
 /**

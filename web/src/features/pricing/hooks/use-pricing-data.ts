@@ -20,11 +20,14 @@ import { useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 
 import { useStatus } from '@/hooks/use-status'
+import { useSystemConfig } from '@/hooks/use-system-config'
+import { getBillingDisplayExchangeRate } from '@/lib/currency'
 
 import { getPricing } from '../api'
 
 export function usePricingData(enabled = true) {
   const { status } = useStatus()
+  const { currency } = useSystemConfig()
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['pricing'],
@@ -38,10 +41,18 @@ export function usePricingData(enabled = true) {
     () => Math.max((status?.price as number) ?? 1, 0.001),
     [status?.price]
   )
+  // Recharge prices are `usd × priceRate` in local currency. The formatters
+  // multiply USD amounts by the *display* exchange rate, so pre-divide by
+  // that same rate (1 for USD, USD rate for CNY, custom rate for CUSTOM).
+  // Using `status.usd_exchange_rate` here mis-scales CUSTOM currencies.
   const usdExchangeRate = useMemo(
-    () => Math.max((status?.usd_exchange_rate as number) ?? priceRate, 0.001),
-    [status?.usd_exchange_rate, priceRate]
+    () => Math.max(getBillingDisplayExchangeRate(currency), 0.001),
+    [currency]
   )
+  // When one unit of credit costs exactly its displayed value, "Standard" and
+  // "Recharge" print identical numbers and the switch only confuses users.
+  const rechargePriceMatchesStandard =
+    Math.abs(priceRate - usdExchangeRate) < 1e-9
 
   const models = useMemo(() => {
     if (!data?.data || !data?.vendors) return []
@@ -75,5 +86,6 @@ export function usePricingData(enabled = true) {
     refetch,
     priceRate,
     usdExchangeRate,
+    rechargePriceMatchesStandard,
   }
 }

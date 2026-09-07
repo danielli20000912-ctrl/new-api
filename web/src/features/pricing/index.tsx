@@ -52,6 +52,7 @@ export function Pricing() {
     isLoading,
     priceRate,
     usdExchangeRate,
+    rechargePriceMatchesStandard,
   } = usePricingData()
 
   const {
@@ -234,6 +235,7 @@ export function Pricing() {
                 onTokenUnitChange={setTokenUnit}
                 showRechargePrice={showRechargePrice}
                 onRechargePriceChange={setShowRechargePrice}
+                showRechargeToggle={!rechargePriceMatchesStandard}
                 viewMode={viewMode}
                 onViewModeChange={setViewMode}
                 quotaTypeFilter={quotaTypeFilter}
